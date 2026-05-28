@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Loader2, Users } from 'lucide-react';
 import { joinMatchmaking, checkMatchmakingStatus } from '../../utils/api';
 import type { Difficulty } from '../../utils/api';
 
@@ -20,12 +19,12 @@ export function MatchmakingScreen({
 }: MatchmakingScreenProps) {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [dots, setDots] = useState(0);
 
   useEffect(() => {
     const initMatchmaking = async () => {
       try {
         const result = await joinMatchmaking(difficulty, playerName, isGuest);
-
         if (result.status === 'queued') {
           setPlayerId(result.playerId);
         } else if (result.gameId) {
@@ -35,13 +34,11 @@ export function MatchmakingScreen({
         setError(err.message);
       }
     };
-
     initMatchmaking();
   }, []);
 
   useEffect(() => {
     if (!playerId) return;
-
     const interval = setInterval(async () => {
       try {
         const result = await checkMatchmakingStatus(playerId);
@@ -52,83 +49,159 @@ export function MatchmakingScreen({
         console.log('Error checking status:', err);
       }
     }, 1000);
-
     return () => clearInterval(interval);
   }, [playerId, difficulty, onMatchFound]);
 
-  const difficultyLabels = {
-    3: { name: 'Easy', color: 'green' },
-    4: { name: 'Medium', color: 'yellow' },
-    5: { name: 'Hard', color: 'red' },
+  // Animated dots
+  useEffect(() => {
+    const t = setInterval(() => setDots(d => (d + 1) % 4), 500);
+    return () => clearInterval(t);
+  }, []);
+
+  const difficultyMeta: Record<number, { label: string; color: string; bg: string; badgeBg: string; emoji: string }> = {
+    3: { label: 'Easy', color: 'var(--green)', bg: '#E8FFF5', badgeBg: 'var(--green)', emoji: '🟢' },
+    4: { label: 'Medium', color: '#d4a600', bg: '#FFF8E1', badgeBg: 'var(--yellow)', emoji: '🟡' },
+    5: { label: 'Hard', color: 'var(--red)', bg: '#FFF0F0', badgeBg: 'var(--red)', emoji: '🔴' },
   };
-
-  const { name, color } = difficultyLabels[difficulty];
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg shadow-xl p-8">
-        <button
-          onClick={onBack}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
-        >
-          <ArrowLeft className="w-5 h-5 mr-2" />
-          Back
-        </button>
-        <div className="text-center">
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
-          </div>
-          <button
-            onClick={onBack}
-            className="mt-4 bg-gray-600 text-white rounded-lg py-2 px-6 hover:bg-gray-700 transition-colors"
-          >
-            Go Back
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const meta = difficultyMeta[difficulty];
 
   return (
-    <div className="bg-white rounded-lg shadow-xl p-8">
-      <button
-        onClick={onBack}
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'var(--cream)',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: 'var(--ff-display)',
+        color: 'var(--ink)',
+      }}
+    >
+      {/* Nav */}
+      <nav
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '1rem 1.5rem',
+          borderBottom: '2.5px solid var(--ink)',
+          gap: '1rem',
+        }}
       >
-        <ArrowLeft className="w-5 h-5 mr-2" />
-        Cancel
-      </button>
-
-      <div className="text-center">
-        <div className="mb-6">
-          <div className="flex items-center justify-center mb-4">
-            <Users className="w-16 h-16 text-indigo-600" />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Finding Opponent...
-          </h2>
-          <p className="text-gray-600">
-            Searching for a {name} ({difficulty} digits) match
-          </p>
+        <button className="nd-btn nd-btn-ghost nd-btn-sm" onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+          ← Cancel
+        </button>
+        <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
+          🎯 <span style={{ color: 'var(--orange)' }}>Number</span> Duel
         </div>
+      </nav>
 
-        <div className="mb-8">
-          <div className="flex items-center justify-center space-x-2">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-            <div className="flex space-x-1">
-              <div className="w-3 h-3 bg-indigo-600 rounded-full animate-pulse"></div>
-              <div className="w-3 h-3 bg-indigo-600 rounded-full animate-pulse delay-100"></div>
-              <div className="w-3 h-3 bg-indigo-600 rounded-full animate-pulse delay-200"></div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1.5rem' }}>
+        {error ? (
+          <div className="nd-card" style={{ padding: '2rem', maxWidth: 400, width: '100%', textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>😕</div>
+            <h2 style={{ marginBottom: '0.75rem' }}>Something went wrong</h2>
+            <div
+              style={{
+                background: 'rgba(255,51,51,0.08)',
+                border: '1.5px solid var(--red)',
+                borderRadius: 12,
+                padding: '0.85rem',
+                color: 'var(--red)',
+                fontFamily: 'var(--ff-mono)',
+                fontSize: '0.8rem',
+                marginBottom: '1.25rem',
+              }}
+            >
+              {error}
             </div>
+            <button className="nd-btn nd-btn-ink nd-btn-full" onClick={onBack}>← Go Back</button>
           </div>
-        </div>
+        ) : (
+          <div style={{ maxWidth: 440, width: '100%', textAlign: 'center' }}>
+            {/* Animated finder */}
+            <div
+              className="nd-card"
+              style={{ padding: '2.5rem 2rem', marginBottom: '1.5rem' }}
+            >
+              {/* Pulsing rings */}
+              <div style={{ position: 'relative', width: 120, height: 120, margin: '0 auto 2rem' }}>
+                {[0, 1, 2].map(i => (
+                  <div
+                    key={i}
+                    style={{
+                      position: 'absolute',
+                      inset: `${i * -20}px`,
+                      borderRadius: '50%',
+                      border: `2px solid var(--orange)`,
+                      opacity: 0.15 + i * 0.1,
+                      animation: `pulse-dot 1.8s ease-in-out ${i * 0.3}s infinite`,
+                    }}
+                  />
+                ))}
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: '50%',
+                    background: meta.badgeBg,
+                    border: '2.5px solid var(--ink)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '2.5rem',
+                    boxShadow: 'var(--card-shadow)',
+                  }}
+                >
+                  {meta.emoji}
+                </div>
+              </div>
 
-        <div className="bg-gray-50 rounded-lg p-6">
-          <p className="text-sm text-gray-700">
-            You'll be matched with another player looking for a {name} game.
-            This should only take a few seconds.
-          </p>
-        </div>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+                Finding Opponent{'.'.repeat(dots)}
+              </h2>
+              <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                Searching for a <strong>{meta.label}</strong> ({difficulty} digits) match
+              </p>
+
+              {/* Difficulty badge */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: meta.bg,
+                  border: '2.5px solid var(--ink)',
+                  borderRadius: 12,
+                  padding: '0.5rem 1rem',
+                  boxShadow: '2px 2px 0 var(--ink)',
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: 'var(--ff-mono)',
+                    fontWeight: 700,
+                    fontSize: '1.1rem',
+                    background: meta.badgeBg,
+                    color: difficulty === 4 ? 'var(--ink)' : '#fff',
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    border: '2px solid var(--ink)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {difficulty}
+                </span>
+                <span style={{ fontWeight: 600 }}>{meta.label} Mode</span>
+              </div>
+            </div>
+
+            <p style={{ fontFamily: 'var(--ff-mono)', fontSize: '0.75rem', color: '#aaa' }}>
+              You'll be matched shortly. Hang tight! ✨
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

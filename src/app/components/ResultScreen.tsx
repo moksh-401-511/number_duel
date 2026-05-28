@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Target, Clock, WifiOff, Home, Loader2, TrendingUp } from 'lucide-react';
+import { Loader2, TrendingUp } from 'lucide-react';
 import { getGameState, getUserStats } from '../../utils/api';
 import type { GameState, UserStats } from '../../utils/api';
 
@@ -20,7 +20,6 @@ export function ResultScreen({ gameId, playerId, userId, onPlayAgain }: ResultSc
       try {
         const gameResult = await getGameState(gameId, playerId);
         setGame(gameResult.game);
-
         if (userId) {
           const statsResult = await getUserStats(userId);
           setStats(statsResult);
@@ -31,15 +30,25 @@ export function ResultScreen({ gameId, playerId, userId, onPlayAgain }: ResultSc
         setLoading(false);
       }
     };
-
     fetchData();
   }, [gameId, playerId, userId]);
 
   if (loading || !game) {
     return (
-      <div className="bg-white rounded-lg shadow-xl p-8 text-center">
-        <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
-        <p className="text-gray-600">Loading results...</p>
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'var(--cream)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'var(--ff-display)',
+        }}
+      >
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 style={{ width: 48, height: 48, color: 'var(--orange)', animation: 'spin 1s linear infinite', marginBottom: 16 }} />
+          <p style={{ color: '#666' }}>Loading results…</p>
+        </div>
       </div>
     );
   }
@@ -47,109 +56,171 @@ export function ResultScreen({ gameId, playerId, userId, onPlayAgain }: ResultSc
   const isWinner = game.winner === playerId;
   const opponent = game.players.find(p => p?.id !== playerId);
   const me = game.players.find(p => p?.id === playerId);
+  const myGuessCount = game.guesses.filter(g => g.playerId === playerId).length;
+  const oppGuessCount = game.guesses.filter(g => g.playerId !== playerId).length;
 
-  const winReasonText = {
-    guessed: isWinner ? 'You guessed their secret number!' : 'They guessed your secret number',
-    opponent_timeout: isWinner ? 'Opponent timed out 3 times' : 'You timed out 3 times',
-    opponent_disconnected: isWinner ? 'Opponent disconnected' : 'You disconnected',
+  const winReasonText: Record<string, string> = {
+    guessed: isWinner ? 'You cracked their secret number! 🎉' : 'They cracked your secret number.',
+    opponent_timeout: isWinner ? 'Opponent timed out 3 times.' : 'You timed out 3 times.',
+    opponent_disconnected: isWinner ? 'Opponent disconnected.' : 'You disconnected.',
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-xl p-8">
-      <div className="text-center mb-8">
-        <div className="mb-6">
-          {isWinner ? (
-            <div className="flex items-center justify-center mb-4">
-              <Trophy className="w-20 h-20 text-yellow-500" />
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'var(--cream)',
+        fontFamily: 'var(--ff-display)',
+        color: 'var(--ink)',
+      }}
+    >
+      {/* Nav */}
+      <nav
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem 1.5rem',
+          borderBottom: '2.5px solid var(--ink)',
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
+          🎯 <span style={{ color: 'var(--orange)' }}>Number</span> Duel
+        </div>
+      </nav>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem 1.5rem',
+        }}
+      >
+        <div style={{ maxWidth: 480, width: '100%' }}>
+
+          {/* Winner banner */}
+          <div
+            className="nd-card"
+            style={{
+              padding: '2rem',
+              textAlign: 'center',
+              marginBottom: '1rem',
+              background: isWinner
+                ? 'linear-gradient(135deg, rgba(255,210,63,0.15) 0%, rgba(46,204,113,0.1) 100%)'
+                : 'rgba(255,255,255,0.5)',
+            }}
+          >
+            <div style={{ fontSize: '4rem', marginBottom: '0.5rem', lineHeight: 1 }}>
+              {isWinner ? '🏆' : '💀'}
             </div>
-          ) : (
-            <div className="flex items-center justify-center mb-4">
-              <Target className="w-20 h-20 text-gray-400" />
+            <h2
+              style={{
+                fontSize: 'clamp(2rem, 8vw, 3rem)',
+                fontWeight: 700,
+                color: isWinner ? 'var(--green)' : '#888',
+                marginBottom: '0.35rem',
+                lineHeight: 1,
+              }}
+            >
+              {isWinner ? 'You Win!' : 'You Lost'}
+            </h2>
+            <p style={{ color: '#666', fontSize: '0.92rem', marginBottom: 0 }}>
+              {game.winReason && winReasonText[game.winReason]}
+            </p>
+          </div>
+
+          {/* Players */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+            {[
+              { label: 'You', player: me, highlight: isWinner, emoji: '🧠' },
+              { label: 'Opponent', player: opponent, highlight: !isWinner, emoji: '🤖' },
+            ].map(({ label, player, highlight, emoji }) => (
+              <div
+                key={label}
+                className="nd-card"
+                style={{
+                  padding: '1.1rem',
+                  background: highlight
+                    ? isWinner
+                      ? 'rgba(46,204,113,0.08)'
+                      : 'rgba(255,51,51,0.06)'
+                    : 'rgba(255,255,255,0.5)',
+                  borderColor: highlight ? (isWinner ? 'var(--green)' : 'var(--red)') : 'var(--ink)',
+                }}
+              >
+                <div style={{ fontSize: '1.5rem', marginBottom: '0.35rem' }}>{emoji}</div>
+                <div style={{ fontSize: '0.72rem', color: '#999', marginBottom: '0.15rem' }}>{label}</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.35rem' }}>
+                  {player?.name || '—'}
+                </div>
+                {player?.secretNumber && (
+                  <div style={{ fontFamily: 'var(--ff-mono)', fontSize: '0.65rem', color: '#888' }}>
+                    Secret: <span style={{ fontWeight: 700, color: 'var(--orange)', fontSize: '0.85rem' }}>{player.secretNumber}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Game summary */}
+          <div className="nd-card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
+            <div style={{ fontWeight: 700, marginBottom: '1rem', fontSize: '0.95rem' }}>📊 Game Summary</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem', textAlign: 'center' }}>
+              {[
+                { label: 'Your Guesses', value: myGuessCount, color: 'var(--orange)' },
+                { label: 'Their Guesses', value: oppGuessCount, color: 'var(--teal)' },
+                { label: 'Difficulty', value: game.difficulty, color: 'var(--ink)' },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ padding: '0.75rem 0.5rem', background: 'rgba(26,18,7,0.03)', borderRadius: 10 }}>
+                  <div style={{ fontFamily: 'var(--ff-mono)', fontSize: '1.6rem', fontWeight: 700, color, lineHeight: 1 }}>
+                    {value}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#888', marginTop: '0.25rem' }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Stats */}
+          {stats && (
+            <div
+              className="nd-card"
+              style={{
+                padding: '1.25rem',
+                marginBottom: '1rem',
+                background: 'rgba(255,107,53,0.04)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', fontWeight: 700, fontSize: '0.95rem' }}>
+                <TrendingUp size={18} style={{ color: 'var(--orange)' }} /> Your Stats
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem', textAlign: 'center' }}>
+                {[
+                  { label: 'Games', value: stats.gamesPlayed, color: 'var(--ink)' },
+                  { label: 'Wins', value: stats.wins, color: 'var(--green)' },
+                  {
+                    label: 'Win Rate',
+                    value: `${stats.gamesPlayed > 0 ? Math.round((stats.wins / stats.gamesPlayed) * 100) : 0}%`,
+                    color: 'var(--orange)',
+                  },
+                ].map(({ label, value, color }) => (
+                  <div key={label} style={{ padding: '0.75rem 0.5rem', background: 'rgba(255,255,255,0.5)', borderRadius: 10 }}>
+                    <div style={{ fontFamily: 'var(--ff-mono)', fontSize: '1.6rem', fontWeight: 700, color, lineHeight: 1 }}>
+                      {value}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#888', marginTop: '0.25rem' }}>{label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-          <h2 className={`text-4xl font-bold mb-2 ${isWinner ? 'text-green-600' : 'text-gray-700'}`}>
-            {isWinner ? 'You Win!' : 'You Lost'}
-          </h2>
-          <p className="text-gray-600 text-lg">
-            {game.winReason && winReasonText[game.winReason]}
-          </p>
+
+          {/* CTA */}
+          <button className="nd-btn nd-btn-orange nd-btn-full nd-btn-lg" onClick={onPlayAgain}>
+            🏠 Back to Home
+          </button>
         </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className={`p-4 rounded-lg ${isWinner ? 'bg-green-50 border-2 border-green-600' : 'bg-gray-50'}`}>
-            <div className="text-sm text-gray-600 mb-1">You</div>
-            <div className="font-bold text-xl">{me?.name}</div>
-            {me?.secretNumber && (
-              <div className="mt-2 text-sm text-gray-600">
-                Your secret: <span className="font-mono font-bold text-lg">{me.secretNumber}</span>
-              </div>
-            )}
-          </div>
-          <div className={`p-4 rounded-lg ${!isWinner ? 'bg-red-50 border-2 border-red-600' : 'bg-gray-50'}`}>
-            <div className="text-sm text-gray-600 mb-1">Opponent</div>
-            <div className="font-bold text-xl">{opponent?.name}</div>
-            {opponent?.secretNumber && (
-              <div className="mt-2 text-sm text-gray-600">
-                Their secret: <span className="font-mono font-bold text-lg">{opponent.secretNumber}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h3 className="font-bold text-gray-900 mb-3">Game Summary</h3>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div>
-              <div className="text-gray-600">Your Guesses</div>
-              <div className="text-2xl font-bold text-indigo-600">
-                {game.guesses.filter(g => g.playerId === playerId).length}
-              </div>
-            </div>
-            <div>
-              <div className="text-gray-600">Their Guesses</div>
-              <div className="text-2xl font-bold text-indigo-600">
-                {game.guesses.filter(g => g.playerId !== playerId).length}
-              </div>
-            </div>
-            <div>
-              <div className="text-gray-600">Difficulty</div>
-              <div className="text-2xl font-bold text-indigo-600">{game.difficulty}</div>
-            </div>
-          </div>
-        </div>
-
-        {stats && (
-          <div className="bg-indigo-50 rounded-lg p-4 mb-6 border-2 border-indigo-600">
-            <div className="flex items-center justify-center mb-3">
-              <TrendingUp className="w-5 h-5 text-indigo-600 mr-2" />
-              <h3 className="font-bold text-indigo-900">Your Stats</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <div className="text-indigo-700">Games Played</div>
-                <div className="text-2xl font-bold text-indigo-900">{stats.gamesPlayed}</div>
-              </div>
-              <div>
-                <div className="text-indigo-700">Wins</div>
-                <div className="text-2xl font-bold text-green-600">{stats.wins}</div>
-              </div>
-              <div>
-                <div className="text-indigo-700">Win Rate</div>
-                <div className="text-2xl font-bold text-indigo-900">
-                  {stats.gamesPlayed > 0 ? Math.round((stats.wins / stats.gamesPlayed) * 100) : 0}%
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <button
-          onClick={onPlayAgain}
-          className="w-full bg-indigo-600 text-white rounded-lg py-3 px-4 hover:bg-indigo-700 transition-colors font-medium flex items-center justify-center"
-        >
-          <Home className="w-5 h-5 mr-2" />
-          Play Again
-        </button>
       </div>
     </div>
   );

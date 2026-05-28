@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { createRoom, joinRoom } from '../../utils/api';
 import type { Difficulty } from '../../utils/api';
 
@@ -40,16 +40,11 @@ export function RoomScreen({
   };
 
   const handleJoinRoom = async () => {
-    if (!roomCode.trim()) {
-      setError('Please enter a room code');
-      return;
-    }
-
+    if (!roomCode.trim()) { setError('Please enter a room code'); return; }
     setLoading(true);
     setError('');
     try {
       const result = await joinRoom(roomCode.toUpperCase(), playerName, isGuest);
-      // Pass the gameId and playerId - difficulty will be fetched from game state
       onRoomJoined?.(result.gameId, result.playerId);
     } catch (err: any) {
       setError(err.message);
@@ -57,116 +52,177 @@ export function RoomScreen({
     }
   };
 
+  const difficulties: Array<{ d: Difficulty; label: string; bg: string; activeBg: string; activeColor: string; badgeBg: string; badgeColor: string }> = [
+    { d: 3, label: 'Easy',   bg: '#f7f7f7', activeBg: '#E8FFF5', activeColor: '#1a7a4a', badgeBg: 'var(--green)', badgeColor: '#fff' },
+    { d: 4, label: 'Medium', bg: '#f7f7f7', activeBg: '#FFF8E1', activeColor: '#8a6800', badgeBg: 'var(--yellow)', badgeColor: 'var(--ink)' },
+    { d: 5, label: 'Hard',   bg: '#f7f7f7', activeBg: '#FFF0F0', activeColor: '#b52020', badgeBg: 'var(--red)', badgeColor: '#fff' },
+  ];
+
   return (
-    <div className="bg-white rounded-lg shadow-xl p-8">
-      <button
-        onClick={onBack}
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'var(--cream)',
+        fontFamily: 'var(--ff-display)',
+        color: 'var(--ink)',
+      }}
+    >
+      {/* Nav */}
+      <nav
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '1rem 1.5rem',
+          borderBottom: '2.5px solid var(--ink)',
+          gap: '1rem',
+        }}
       >
-        <ArrowLeft className="w-5 h-5 mr-2" />
-        Back
-      </button>
+        <button className="nd-btn nd-btn-ghost nd-btn-sm" onClick={onBack}>
+          ← Back
+        </button>
+        <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
+          🎯 <span style={{ color: 'var(--orange)' }}>Number</span> Duel
+        </div>
+      </nav>
 
-      <h2 className="text-3xl font-bold text-gray-900 mb-6">
-        {mode === 'create' ? 'Create Private Room' : 'Join Private Room'}
-      </h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem 1.5rem' }}>
+        <div className="nd-card" style={{ padding: '2rem', maxWidth: 440, width: '100%' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>
+            {mode === 'create' ? '🏠' : '🔑'}
+          </div>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+            {mode === 'create' ? 'Create Private Room' : 'Join Private Room'}
+          </h2>
+          <p style={{ color: '#666', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
+            {mode === 'create'
+              ? 'Choose a difficulty and share the room code with your friend.'
+              : 'Enter the code your friend shared with you.'}
+          </p>
 
-      {mode === 'create' ? (
-        <div>
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Difficulty
-            </label>
-            <div className="grid grid-cols-3 gap-3">
+          {mode === 'create' ? (
+            <>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontFamily: 'var(--ff-mono)', fontSize: '0.65rem', fontWeight: 700, color: '#999', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+                  Select Difficulty
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.65rem' }}>
+                  {difficulties.map(({ d, label, activeBg, activeColor, badgeBg, badgeColor }) => {
+                    const active = selectedDifficulty === d;
+                    return (
+                      <button
+                        key={d}
+                        onClick={() => setSelectedDifficulty(d)}
+                        style={{
+                          padding: '1rem 0.5rem',
+                          borderRadius: 14,
+                          border: active ? '2.5px solid var(--ink)' : '2px solid rgba(26,18,7,0.15)',
+                          background: active ? activeBg : 'rgba(255,255,255,0.6)',
+                          color: active ? activeColor : '#666',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--ff-display)',
+                          boxShadow: active ? '3px 3px 0 var(--ink)' : 'none',
+                          transition: 'all 0.12s',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 40, height: 40, borderRadius: 10,
+                            background: active ? badgeBg : 'rgba(26,18,7,0.08)',
+                            color: active ? badgeColor : '#999',
+                            border: '2px solid var(--ink)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontFamily: 'var(--ff-mono)', fontWeight: 700, fontSize: '1.3rem',
+                            margin: '0 auto 0.4rem',
+                          }}
+                        >
+                          {d}
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>{label}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <button
-                onClick={() => setSelectedDifficulty(3)}
-                className={`py-4 px-4 rounded-lg border-2 transition-colors ${
-                  selectedDifficulty === 3
-                    ? 'border-green-600 bg-green-50 text-green-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className="nd-btn nd-btn-orange nd-btn-full"
+                onClick={handleCreateRoom}
+                disabled={loading}
               >
-                <div className="text-2xl font-bold">3</div>
-                <div className="text-xs">Easy</div>
+                {loading ? (
+                  <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  '🏠 Create Room'
+                )}
               </button>
+            </>
+          ) : (
+            <>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontFamily: 'var(--ff-mono)', fontSize: '0.65rem', fontWeight: 700, color: '#999', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                  Room Code
+                </div>
+                <input
+                  type="text"
+                  value={roomCode}
+                  onChange={e => setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+                  onKeyDown={e => e.key === 'Enter' && handleJoinRoom()}
+                  placeholder="ABCDEF"
+                  maxLength={6}
+                  style={{
+                    width: '100%',
+                    fontFamily: 'var(--ff-mono)',
+                    fontSize: '2rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.2em',
+                    textAlign: 'center',
+                    padding: '0.75rem 1rem',
+                    border: '2.5px solid var(--ink)',
+                    borderRadius: 14,
+                    background: 'rgba(255,255,255,0.8)',
+                    outline: 'none',
+                    textTransform: 'uppercase',
+                    boxSizing: 'border-box',
+                    transition: 'box-shadow 0.15s',
+                  }}
+                  onFocus={e => { e.target.style.boxShadow = '3px 3px 0 var(--ink)'; }}
+                  onBlur={e => { e.target.style.boxShadow = 'none'; }}
+                />
+              </div>
+
               <button
-                onClick={() => setSelectedDifficulty(4)}
-                className={`py-4 px-4 rounded-lg border-2 transition-colors ${
-                  selectedDifficulty === 4
-                    ? 'border-yellow-600 bg-yellow-50 text-yellow-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className="nd-btn nd-btn-orange nd-btn-full"
+                onClick={handleJoinRoom}
+                disabled={loading || !roomCode.trim()}
               >
-                <div className="text-2xl font-bold">4</div>
-                <div className="text-xs">Medium</div>
+                {loading ? (
+                  <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                ) : (
+                  '🔑 Join Room →'
+                )}
               </button>
-              <button
-                onClick={() => setSelectedDifficulty(5)}
-                className={`py-4 px-4 rounded-lg border-2 transition-colors ${
-                  selectedDifficulty === 5
-                    ? 'border-red-600 bg-red-50 text-red-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="text-2xl font-bold">5</div>
-                <div className="text-xs">Hard</div>
-              </button>
+            </>
+          )}
+
+          {error && (
+            <div
+              style={{
+                marginTop: '1rem',
+                padding: '0.75rem 1rem',
+                background: 'rgba(255,51,51,0.08)',
+                border: '1.5px solid var(--red)',
+                borderRadius: 10,
+                color: 'var(--red)',
+                fontFamily: 'var(--ff-mono)',
+                fontSize: '0.78rem',
+              }}
+            >
+              ⚠ {error}
             </div>
-          </div>
-
-          <button
-            onClick={handleCreateRoom}
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white rounded-lg py-3 px-4 hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Room'
-            )}
-          </button>
+          )}
         </div>
-      ) : (
-        <div>
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Enter Room Code
-            </label>
-            <input
-              type="text"
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              placeholder="ABCDEF"
-              maxLength={6}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-600 text-2xl tracking-widest text-center font-bold uppercase"
-            />
-          </div>
-
-          <button
-            onClick={handleJoinRoom}
-            disabled={loading || !roomCode.trim()}
-            className="w-full bg-indigo-600 text-white rounded-lg py-3 px-4 hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Joining...
-              </>
-            ) : (
-              'Join Room'
-            )}
-          </button>
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          {error}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
